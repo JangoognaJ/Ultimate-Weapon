@@ -6,13 +6,23 @@ public class scr_playerScript : MonoBehaviour
 
     InputSystem_Actions controls;
     Vector2 moveInput;
+
+    public GameObject lightAttackPrefab;
+    public GameObject heavyAttackPrefab;
+    public Transform attackSpawnPoint;
+
+
     [SerializeField] private float moveSpeed = 5f;
     [SerializeField] private float jumpForce = 6f;
     [SerializeField] private float dashSpeed = 50f;
     [SerializeField] private float dashDuration = 0.2f;
     [SerializeField] private float dashCooldown = 2f;
+    [SerializeField] private float lightAttackCooldown = 0.3f;
+    [SerializeField] private float heavyAttackCooldown = 5f;
 
 
+    private bool canLightAttack = true;
+    private bool canHeavyAttack = true;
     private bool canDash = true;
     private bool isDashing = false;
     private bool isGrounded = true;
@@ -28,16 +38,21 @@ public class scr_playerScript : MonoBehaviour
             {
                 moveInput = ctx.ReadValue<Vector2>();
 
-                
+
                 if (moveInput.sqrMagnitude < 0.01f)
                     moveInput = Vector2.zero;
             };
 
             controls.PlayerControls.Movement.canceled += ctx => moveInput = Vector2.zero;
 
-            controls.PlayerControls.Jump.performed += ctx => Jump();
+            controls.PlayerControls.Jump.performed += ctx => PlayerJump();
 
             controls.PlayerControls.Dash.performed += ctx => PlayerDash();
+
+            controls.PlayerControls.LightAttack.performed += ctx => PlayerLightAttack;
+
+            controls.PlayerControls.HeavyAttack.performed += ctx => PlayerHeavyAttack;
+
 
             rb = GetComponent<Rigidbody>();
 
@@ -122,7 +137,7 @@ public class scr_playerScript : MonoBehaviour
         canDash = true;
     }
 
-    void Jump()
+    void PlayerJump()
     {
         if (!isGrounded) return;
 
@@ -138,4 +153,18 @@ public class scr_playerScript : MonoBehaviour
             isGrounded = true;
         }
     }
+
+    private void PlayerLightAttack()
+    {
+        if (!canLightAttack || isDashing) return;
+        StartCoroutine(LightAttackRoutine());
+    }
+
+    private void PlayerHeavyAttack()
+    {
+        if (!canHeavyAttack || isDashing) return;
+        StartCoroutine(PlayerHeavyAttack());
+    }
+
+    System.Collections
 }
