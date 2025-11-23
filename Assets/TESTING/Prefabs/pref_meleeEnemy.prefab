@@ -157,7 +157,7 @@ MonoBehaviour:
   renderersToFlash: []
   flashDuration: 0.15
   contactDamage: 10
-  essencePrefab: {fileID: 919132149155446097, guid: 65fdf03c85792c4498f2b9ad05d2e9e5, type: 3}
+  essencePrefab: {fileID: 5740114062547483274, guid: 62728fd2f20e22744b14c5212d3409fd, type: 3}
 --- !u!114 &5550463843400316874
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -175,7 +175,7 @@ MonoBehaviour:
   renderersToFlash: []
   flashDuration: 0.15
   contactDamage: 10
-  essencePrefab: {fileID: 919132149155446097, guid: 65fdf03c85792c4498f2b9ad05d2e9e5, type: 3}
+  essencePrefab: {fileID: 5740114062547483274, guid: 62728fd2f20e22744b14c5212d3409fd, type: 3}
   rotateSpeed: 10
   stopDistance: 0.5
 --- !u!1 &1844788509124614893
