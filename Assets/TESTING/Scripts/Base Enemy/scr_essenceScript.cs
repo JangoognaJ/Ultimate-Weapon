@@ -71,6 +71,7 @@ public class scr_essence : MonoBehaviour
         {
             Debug.Log("Essence: healing player");
             playerScript.Heal(healAmount);
+            playerScript.ReduceHeat(5f);
             Destroy(gameObject);
         }
     }

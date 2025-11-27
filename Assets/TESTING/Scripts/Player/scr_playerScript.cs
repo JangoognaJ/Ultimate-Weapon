@@ -375,6 +375,11 @@ public class scr_playerScript : MonoBehaviour
         }
     }
 
+    public void ReduceHeat(float amount)
+    {
+        heat = Mathf.Max(0f, heat - amount);
+    }
+
     private System.Collections.IEnumerator OverheatRoutine()
     {
         isOverheatRoutineRunning = true;
@@ -396,8 +401,8 @@ public class scr_playerScript : MonoBehaviour
         
         while (heat > 0f)
         {
-            yield return new WaitForSeconds(0.1f);
-            heat = Mathf.Max(0f, heat - 5f);
+            yield return new WaitForSeconds(0.5f);
+            heat = Mathf.Max(0f, heat - 10f);
             Debug.Log($"Cooling down, heat: {heat}");
         }
 
