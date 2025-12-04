@@ -8,6 +8,8 @@ public class scr_playerScript : MonoBehaviour
     InputSystem_Actions controls;
     Vector2 moveInput;
 
+    private Vector3 lastMoveDirection = Vector3.zero;
+
     public GameObject lightAttackPrefab;
     public GameObject heavyAttackPrefab;
     public Transform attackSpawnPoint;
@@ -22,6 +24,8 @@ public class scr_playerScript : MonoBehaviour
     private float heavyAttackCooldown = 5f;
     private float nextLightAttackTime = 0f;
     private float nextHeavyAttackTime = 0f;
+    [SerializeField] private float rotateSpeed = 10f;
+    private Vector3 moveDir = Vector3.zero;
 
     private float heat = 0f;
     private float maxHeat = 100f;
@@ -117,19 +121,40 @@ public class scr_playerScript : MonoBehaviour
 
         rb.AddForce(Physics.gravity * (gravityMultiplier - 1f), ForceMode.Acceleration);
 
-        Vector3 move = new Vector3(moveInput.x, 0, moveInput.y);
+        moveDir = Vector3.zero;
 
-        if (move.sqrMagnitude > 0.0001f)
+        if (moveInput.sqrMagnitude > 0.0001f)
         {
-            move = move.normalized;
-            rb.MovePosition(rb.position + move * moveSpeed * Time.fixedDeltaTime);
+            Vector3 camForward = Camera.main.transform.forward;
+            Vector3 camRight = Camera.main.transform.right;
+
+            camForward.y = 0f;
+            camRight.y = 0f;
+
+            camForward.Normalize();
+            camRight.Normalize();
+
+            moveDir = camForward * moveInput.y + camRight * moveInput.x;
+
+            moveDir.Normalize();
+
+            rb.MovePosition(rb.position + moveDir * moveSpeed * Time.fixedDeltaTime);
+        }
+        if (Mathf.Abs(moveInput.y) > 0.1f) 
+        {
+            lastMoveDirection = moveDir;
         }
     }
 
     private void Update()
     {
-
-        RotateTowardsMouse();
+        if (!isDashing && moveInput.sqrMagnitude > 0.0001f && moveDir.sqrMagnitude > 0.0001f)
+        {
+            Quaternion targetRot = Quaternion.LookRotation(moveDir);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, rotateSpeed * Time.deltaTime);
+        }
+        
+        
 
         if (!isOverheated && heat > 0f)
         {
@@ -149,18 +174,6 @@ public class scr_playerScript : MonoBehaviour
 
     }
 
-    void RotateTowardsMouse()
-    {
-        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-        if (Physics.Raycast(ray, out RaycastHit hit))
-        {
-            Vector3 lookPos = hit.point;
-            lookPos.y = transform.position.y;
-
-            transform.LookAt(lookPos);
-        }
-    }
-
     void PlayerDash()
     {
         if (!canDash) return;
@@ -177,21 +190,22 @@ public class scr_playerScript : MonoBehaviour
 
         Vector3 dashDir;
 
-        if (moveInput.sqrMagnitude > 0.01f)
-            dashDir = new Vector3(moveInput.x, 0, moveInput.y).normalized;
+        if (lastMoveDirection.sqrMagnitude > 0.0001f)
+        {
+            dashDir = lastMoveDirection.normalized;
+        }
         else
+        {
             dashDir = transform.forward;
-
+        }
         rb.linearVelocity = dashDir * dashSpeed;
 
         yield return new WaitForSeconds(dashDuration);
 
         rb.linearVelocity = Vector3.zero;
-
         isDashing = false;
 
         yield return new WaitForSeconds(dashCooldown);
-
         canDash = true;
     }
 
