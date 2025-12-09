@@ -2,8 +2,8 @@ using UnityEngine;
 
 public class scr_movingPlatform1 : MonoBehaviour
 {
-    private float moveDistance = 20f;
-    private float moveSpeed = 0.5f;
+    [SerializeField] private float moveDistance = 20f;
+    [SerializeField] private float moveSpeed = 0.5f;
 
     private Vector3 startPos;
     private Rigidbody rb;
@@ -12,6 +12,8 @@ public class scr_movingPlatform1 : MonoBehaviour
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
+        rb.isKinematic = true; 
+        rb.interpolation = RigidbodyInterpolation.None;
     }
 
     private void Start()
@@ -23,8 +25,8 @@ public class scr_movingPlatform1 : MonoBehaviour
     {
         t += Time.fixedDeltaTime * moveSpeed;
         float offset = Mathf.Sin(t) * moveDistance;
-        Vector3 targetPos = startPos + new Vector3(offset, 0f, 0f);
 
+        Vector3 targetPos = startPos + new Vector3(offset, 0f, 0f);
         rb.MovePosition(targetPos);
     }
 
@@ -43,5 +45,4 @@ public class scr_movingPlatform1 : MonoBehaviour
             collision.transform.SetParent(null);
         }
     }
-
 }

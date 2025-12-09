@@ -15,12 +15,16 @@ public class scr_playerScript : MonoBehaviour
     public Transform attackSpawnPoint;
 
     private float gravityMultiplier = 1.5f;
-    private float moveSpeed = 5f;
-    private float jumpForce = 6f;
+    private float moveSpeed = 10f;
+    private float jumpForce = 10f;
+    [SerializeField] private int maxJumps = 2;
+    private int jumpsRemaining;
+    [SerializeField] private Transform modelRoot;   
+    [SerializeField] private float flipDuration = 0.3f;
     private float dashSpeed = 50f;
-    private float dashDuration = 0.1f;
+    private float dashDuration = 0.2f;
     private float dashCooldown = 2f;
-    private float lightAttackCooldown = 0.3f;
+    private float lightAttackCooldown = 0.1f;
     private float heavyAttackCooldown = 5f;
     private float nextLightAttackTime = 0f;
     private float nextHeavyAttackTime = 0f;
@@ -55,6 +59,8 @@ public class scr_playerScript : MonoBehaviour
     private bool isDashing = false;
     private bool isGrounded = true;
     private bool isInvulnerable = false;
+    private bool isFlipping = false;
+
 
     Rigidbody rb;
 
@@ -84,9 +90,7 @@ public class scr_playerScript : MonoBehaviour
 
 
             rb = GetComponent<Rigidbody>();
-
-            rb.interpolation = RigidbodyInterpolation.Interpolate;
-
+            rb.interpolation = RigidbodyInterpolation.None;  
             rb.constraints = RigidbodyConstraints.FreezeRotationX |
                              RigidbodyConstraints.FreezeRotationZ;
 
@@ -102,6 +106,8 @@ public class scr_playerScript : MonoBehaviour
                 currentBaseColor = renderersToFlash[0].material.color;
             }
         }
+
+        jumpsRemaining = maxJumps;
 
     }
 
@@ -140,7 +146,7 @@ public class scr_playerScript : MonoBehaviour
 
             rb.MovePosition(rb.position + moveDir * moveSpeed * Time.fixedDeltaTime);
         }
-        if (Mathf.Abs(moveInput.y) > 0.1f) 
+        if(moveDir.sqrMagnitude > 0.0001f)
         {
             lastMoveDirection = moveDir;
         }
@@ -211,21 +217,66 @@ public class scr_playerScript : MonoBehaviour
 
     void PlayerJump()
     {
-        if (!isGrounded) return;
+    
+        if (jumpsRemaining <= 0) return;
 
-        isGrounded = false;
+        bool isDoubleJump = !isGrounded && jumpsRemaining == 1;
+
+        Vector3 v = rb.linearVelocity;
+        v.y = 0f;
+        rb.linearVelocity = v;
+
         rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
 
+        isGrounded = false;
+        jumpsRemaining--;
+
+     
+        if (isDoubleJump)
+        {
+            StartCoroutine(DoubleJumpFlip());
+        }
     }
+
+    System.Collections.IEnumerator DoubleJumpFlip()
+    {
+        if (isFlipping || modelRoot == null)
+            yield break;
+
+        isFlipping = true;
+
+        float elapsed = 0f;
+        Quaternion startRot = modelRoot.localRotation;
+
+        while (elapsed < flipDuration)
+        {
+            float t = elapsed / flipDuration;
+
+       
+            float angle = Mathf.Lerp(0f, 360f, t);
+
+            modelRoot.localRotation = startRot * Quaternion.Euler(angle, 0f, 0f);
+
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+     
+        modelRoot.localRotation = startRot;
+
+        isFlipping = false;
+    }
+
 
     private void OnCollisionEnter(Collision collision)
     {
-     
+
         foreach (ContactPoint contact in collision.contacts)
         {
             if (contact.normal.y > 0.5f)
             {
                 isGrounded = true;
+                jumpsRemaining = maxJumps; 
                 break;
             }
         }
