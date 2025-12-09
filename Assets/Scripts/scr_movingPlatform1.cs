@@ -2,8 +2,8 @@ using UnityEngine;
 
 public class scr_movingPlatform1 : MonoBehaviour
 {
-    [SerializeField] private float moveDistance = 20f;
-    [SerializeField] private float moveSpeed = 0.5f;
+    [SerializeField] private float moveDistance = 50f;
+    [SerializeField] private float moveSpeed = 0.3f;
 
     private Vector3 startPos;
     private Rigidbody rb;
