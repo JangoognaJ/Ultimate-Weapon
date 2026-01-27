@@ -54,6 +54,7 @@ public class scr_playerScript : MonoBehaviour
     private int currentHealth;
     private float invulnerabilityDuration = 1f;
 
+    private bool interactPressed = false;
 
     private bool canDash = true;
     private bool isDashing = false;
@@ -87,6 +88,10 @@ public class scr_playerScript : MonoBehaviour
             controls.PlayerControls.LightAttack.performed += ctx => PlayerLightAttack();
 
             controls.PlayerControls.HeavyAttack.performed += ctx => PlayerHeavyAttack();
+
+            controls.PlayerControls.Interact.performed += ctx => interactPressed = true;
+
+            controls.PlayerControls.Interact.canceled += ctx => interactPressed = false;
 
 
             rb = GetComponent<Rigidbody>();
@@ -506,6 +511,11 @@ public class scr_playerScript : MonoBehaviour
                 r.material.SetColor("_EmissionColor", targetColor * t);
             }
         }
+    }
+
+    public bool IsInteracting()
+    {
+        return interactPressed;
     }
 }
 

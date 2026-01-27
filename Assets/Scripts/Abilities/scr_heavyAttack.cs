@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public class scr_heavyAttack : MonoBehaviour
 {
@@ -28,21 +28,25 @@ public class scr_heavyAttack : MonoBehaviour
 
     private void OnCollisionEnter(Collision collision)
     {
-
-        if (collision.gameObject.CompareTag("LightAttack"))
+        // If it hits a destructible wall → explode
+        if (collision.gameObject.CompareTag("Destructible"))
         {
-    
-            Destroy(collision.gameObject);
-
-   
             Explode();
             return;
         }
 
-       
+        // If it hits a light attack → explode
+        if (collision.gameObject.CompareTag("LightAttack"))
+        {
+            Destroy(collision.gameObject);
+            Explode();
+            return;
+        }
+
+        // Ignore player
         if (collision.gameObject.CompareTag("Player")) return;
 
-  
+        // Damage enemy
         scr_baseEnemy enemy = collision.gameObject.GetComponent<scr_baseEnemy>();
         if (enemy != null)
         {
