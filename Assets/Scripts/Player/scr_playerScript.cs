@@ -4,7 +4,6 @@ using UnityEngine.SceneManagement;
 
 public class scr_playerScript : MonoBehaviour
 {
-
     InputSystem_Actions controls;
     Vector2 moveInput;
 
@@ -19,7 +18,7 @@ public class scr_playerScript : MonoBehaviour
     private float jumpForce = 10f;
     [SerializeField] private int maxJumps = 2;
     private int jumpsRemaining;
-    [SerializeField] private Transform modelRoot;   
+    [SerializeField] private Transform modelRoot;
     [SerializeField] private float flipDuration = 0.3f;
     private float dashSpeed = 50f;
     private float dashDuration = 0.2f;
@@ -31,20 +30,24 @@ public class scr_playerScript : MonoBehaviour
     [SerializeField] private float rotateSpeed = 10f;
     private Vector3 moveDir = Vector3.zero;
 
+    // NEW: cooldown bars (assign in Inspector)
+    public scr_CooldownBar dashBar;
+    public scr_CooldownBar lightBar;
+    public scr_CooldownBar heavyBar;
+
     private float heat = 0f;
     private float maxHeat = 100f;
-    private float lastAttackTime = -999f;   
-    private float nextDissipateTime = 0f;   
+    private float lastAttackTime = -999f;
+    private float nextDissipateTime = 0f;
     private bool isOverheated = false;
     private bool isOverheatRoutineRunning = false;
     public float Heat => heat;
     public float MaxHeat => maxHeat;
 
     [SerializeField] private Color normalColor = Color.white;
-    [SerializeField] private Color overheatColor = new Color(0.3f, 0.7f, 1f, 1f); 
+    [SerializeField] private Color overheatColor = new Color(0.3f, 0.7f, 1f, 1f);
 
     private Color currentBaseColor;
-
 
     public int CurrentHealth => currentHealth;
     public int MaxHealth => maxHealth;
@@ -62,58 +65,52 @@ public class scr_playerScript : MonoBehaviour
     private bool isInvulnerable = false;
     private bool isFlipping = false;
 
-
     Rigidbody rb;
 
     void Awake()
     {
+        controls = new InputSystem_Actions();
+
+        controls.PlayerControls.Movement.performed += ctx =>
         {
-            controls = new InputSystem_Actions();
+            moveInput = ctx.ReadValue<Vector2>();
+            if (moveInput.sqrMagnitude < 0.01f)
+                moveInput = Vector2.zero;
+        };
 
-            controls.PlayerControls.Movement.performed += ctx =>
-            {
-                moveInput = ctx.ReadValue<Vector2>();
+        controls.PlayerControls.Movement.canceled += ctx => moveInput = Vector2.zero;
 
+        controls.PlayerControls.Jump.performed += ctx => PlayerJump();
+        controls.PlayerControls.Dash.performed += ctx => PlayerDash();
+        controls.PlayerControls.LightAttack.performed += ctx => PlayerLightAttack();
+        controls.PlayerControls.HeavyAttack.performed += ctx => PlayerHeavyAttack();
 
-                if (moveInput.sqrMagnitude < 0.01f)
-                    moveInput = Vector2.zero;
-            };
+        controls.PlayerControls.Interact.performed += ctx => interactPressed = true;
+        controls.PlayerControls.Interact.canceled += ctx => interactPressed = false;
 
-            controls.PlayerControls.Movement.canceled += ctx => moveInput = Vector2.zero;
+        rb = GetComponent<Rigidbody>();
+        rb.interpolation = RigidbodyInterpolation.None;
+        rb.constraints = RigidbodyConstraints.FreezeRotationX |
+                         RigidbodyConstraints.FreezeRotationZ;
 
-            controls.PlayerControls.Jump.performed += ctx => PlayerJump();
+        currentHealth = maxHealth;
 
-            controls.PlayerControls.Dash.performed += ctx => PlayerDash();
+        if (renderersToFlash == null || renderersToFlash.Length == 0)
+        {
+            renderersToFlash = GetComponentsInChildren<Renderer>();
+        }
 
-            controls.PlayerControls.LightAttack.performed += ctx => PlayerLightAttack();
-
-            controls.PlayerControls.HeavyAttack.performed += ctx => PlayerHeavyAttack();
-
-            controls.PlayerControls.Interact.performed += ctx => interactPressed = true;
-
-            controls.PlayerControls.Interact.canceled += ctx => interactPressed = false;
-
-
-            rb = GetComponent<Rigidbody>();
-            rb.interpolation = RigidbodyInterpolation.None;  
-            rb.constraints = RigidbodyConstraints.FreezeRotationX |
-                             RigidbodyConstraints.FreezeRotationZ;
-
-            currentHealth = maxHealth;
-
-            if (renderersToFlash == null || renderersToFlash.Length == 0)
-            {
-                renderersToFlash = GetComponentsInChildren<Renderer>();
-            }
-
-            if (renderersToFlash != null && renderersToFlash.Length > 0)
-            {
-                currentBaseColor = renderersToFlash[0].material.color;
-            }
+        if (renderersToFlash != null && renderersToFlash.Length > 0)
+        {
+            currentBaseColor = renderersToFlash[0].material.color;
         }
 
         jumpsRemaining = maxJumps;
 
+        // NEW: setup cooldown bars to match your cooldown values
+        if (dashBar) dashBar.Setup(dashCooldown);
+        if (lightBar) lightBar.Setup(lightAttackCooldown);
+        if (heavyBar) heavyBar.Setup(heavyAttackCooldown);
     }
 
     private void OnEnable()
@@ -146,12 +143,12 @@ public class scr_playerScript : MonoBehaviour
             camRight.Normalize();
 
             moveDir = camForward * moveInput.y + camRight * moveInput.x;
-
             moveDir.Normalize();
 
             rb.MovePosition(rb.position + moveDir * moveSpeed * Time.fixedDeltaTime);
         }
-        if(moveDir.sqrMagnitude > 0.0001f)
+
+        if (moveDir.sqrMagnitude > 0.0001f)
         {
             lastMoveDirection = moveDir;
         }
@@ -164,30 +161,29 @@ public class scr_playerScript : MonoBehaviour
             Quaternion targetRot = Quaternion.LookRotation(moveDir);
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, rotateSpeed * Time.deltaTime);
         }
-        
-        
 
         if (!isOverheated && heat > 0f)
         {
-            
             if (Time.time - lastAttackTime >= 1f)
             {
                 if (Time.time >= nextDissipateTime)
                 {
-                    heat = Mathf.Max(0f, heat - 5f);  
-                    nextDissipateTime = Time.time + 0.5f; 
-                     Debug.Log($"Heat: {heat}");
+                    heat = Mathf.Max(0f, heat - 5f);
+                    nextDissipateTime = Time.time + 0.5f;
+                    Debug.Log($"Heat: {heat}");
                 }
             }
         }
 
         UpdateHeatGlow();
-
     }
 
     void PlayerDash()
     {
         if (!canDash) return;
+
+        // NEW: trigger the dash cooldown bar (empties then refills)
+        dashBar?.Trigger();
 
         heat = Mathf.Max(0f, heat - 10f);
 
@@ -202,13 +198,10 @@ public class scr_playerScript : MonoBehaviour
         Vector3 dashDir;
 
         if (lastMoveDirection.sqrMagnitude > 0.0001f)
-        {
             dashDir = lastMoveDirection.normalized;
-        }
         else
-        {
             dashDir = transform.forward;
-        }
+
         rb.linearVelocity = dashDir * dashSpeed;
 
         yield return new WaitForSeconds(dashDuration);
@@ -222,7 +215,6 @@ public class scr_playerScript : MonoBehaviour
 
     void PlayerJump()
     {
-    
         if (jumpsRemaining <= 0) return;
 
         bool isDoubleJump = !isGrounded && jumpsRemaining == 1;
@@ -236,11 +228,8 @@ public class scr_playerScript : MonoBehaviour
         isGrounded = false;
         jumpsRemaining--;
 
-     
         if (isDoubleJump)
-        {
             StartCoroutine(DoubleJumpFlip());
-        }
     }
 
     System.Collections.IEnumerator DoubleJumpFlip()
@@ -256,8 +245,6 @@ public class scr_playerScript : MonoBehaviour
         while (elapsed < flipDuration)
         {
             float t = elapsed / flipDuration;
-
-       
             float angle = Mathf.Lerp(0f, 360f, t);
 
             modelRoot.localRotation = startRot * Quaternion.Euler(angle, 0f, 0f);
@@ -266,22 +253,18 @@ public class scr_playerScript : MonoBehaviour
             yield return null;
         }
 
-     
         modelRoot.localRotation = startRot;
-
         isFlipping = false;
     }
 
-
     private void OnCollisionEnter(Collision collision)
     {
-
         foreach (ContactPoint contact in collision.contacts)
         {
             if (contact.normal.y > 0.5f)
             {
                 isGrounded = true;
-                jumpsRemaining = maxJumps; 
+                jumpsRemaining = maxJumps;
                 break;
             }
         }
@@ -291,16 +274,13 @@ public class scr_playerScript : MonoBehaviour
         {
             TakeDamage(enemy.contactDamage);
         }
-
     }
 
     private void OnCollisionStay(Collision collision)
     {
-        
         scr_baseEnemy enemy = collision.gameObject.GetComponent<scr_baseEnemy>();
         if (enemy != null)
         {
-            
             TakeDamage(enemy.contactDamage);
         }
     }
@@ -308,8 +288,10 @@ public class scr_playerScript : MonoBehaviour
     private void PlayerLightAttack()
     {
         if (isDashing || !isGrounded || isOverheated) return;
-
         if (Time.time < nextLightAttackTime) return;
+
+        // NEW: trigger the light cooldown bar
+        lightBar?.Trigger();
 
         SpawnAttack(lightAttackPrefab);
         AddHeat(5f);
@@ -320,8 +302,10 @@ public class scr_playerScript : MonoBehaviour
     private void PlayerHeavyAttack()
     {
         if (isDashing || !isGrounded || isOverheated) return;
-
         if (Time.time < nextHeavyAttackTime) return;
+
+        // NEW: trigger the heavy cooldown bar
+        heavyBar?.Trigger();
 
         SpawnAttack(heavyAttackPrefab);
         AddHeat(20f);
@@ -329,10 +313,9 @@ public class scr_playerScript : MonoBehaviour
         nextHeavyAttackTime = Time.time + heavyAttackCooldown;
     }
 
-
     private void SpawnAttack(GameObject prefab)
     {
-        if(prefab == null) return;
+        if (prefab == null) return;
 
         Vector3 spawnPosition = attackSpawnPoint ? attackSpawnPoint.position : transform.position;
         Quaternion spawnRotation = transform.rotation;
@@ -367,7 +350,6 @@ public class scr_playerScript : MonoBehaviour
     private void Die()
     {
         Debug.Log("Player died!");
-
         StartCoroutine(DeathRoutine());
     }
 
@@ -418,7 +400,6 @@ public class scr_playerScript : MonoBehaviour
             elapsed += flashInterval;
         }
 
-        
         if (renderersToFlash != null)
         {
             foreach (var r in renderersToFlash)
@@ -430,6 +411,7 @@ public class scr_playerScript : MonoBehaviour
 
         isInvulnerable = false;
     }
+
     private void AddHeat(float amount)
     {
         if (isOverheated) return;
@@ -457,18 +439,14 @@ public class scr_playerScript : MonoBehaviour
 
         Debug.Log("Player OVERHEATED!");
 
-        
         TakeDamage(10);
         yield return new WaitForSeconds(2f);
 
-        
         TakeDamage(5);
         yield return new WaitForSeconds(2f);
 
-        
         TakeDamage(5);
 
-        
         while (heat > 0f)
         {
             yield return new WaitForSeconds(0.5f);
@@ -478,7 +456,7 @@ public class scr_playerScript : MonoBehaviour
 
         isOverheated = false;
         isOverheatRoutineRunning = false;
-        lastAttackTime = Time.time; 
+        lastAttackTime = Time.time;
 
         Debug.Log("Player cooled down.");
     }
@@ -487,26 +465,20 @@ public class scr_playerScript : MonoBehaviour
     {
         if (renderersToFlash == null || renderersToFlash.Length == 0) return;
 
-        
         float t = 0f;
 
         if (heat >= 40f)
         {
-            
             t = Mathf.InverseLerp(40f, maxHeat, heat);
         }
 
-        
         Color targetColor = Color.Lerp(currentBaseColor, overheatColor, t);
 
         foreach (var r in renderersToFlash)
         {
             if (r != null)
             {
-                
                 r.material.color = targetColor;
-
-              
                 r.material.EnableKeyword("_EMISSION");
                 r.material.SetColor("_EmissionColor", targetColor * t);
             }
@@ -518,4 +490,3 @@ public class scr_playerScript : MonoBehaviour
         return interactPressed;
     }
 }
-
