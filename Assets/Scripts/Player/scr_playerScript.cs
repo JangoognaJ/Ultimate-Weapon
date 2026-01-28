@@ -4,6 +4,12 @@ using UnityEngine.SceneManagement;
 
 public class scr_playerScript : MonoBehaviour
 {
+    [SerializeField] private Transform initialRespawnPoint; 
+    private Transform currentRespawnPoint;
+    private int currentCheckpointNumber = 0;
+
+    private scr_GameManager gm;
+
     InputSystem_Actions controls;
     Vector2 moveInput;
 
@@ -88,10 +94,15 @@ public class scr_playerScript : MonoBehaviour
         controls.PlayerControls.Interact.performed += ctx => interactPressed = true;
         controls.PlayerControls.Interact.canceled += ctx => interactPressed = false;
 
+        gm = FindFirstObjectByType<scr_GameManager>();
+        controls.PlayerControls.Pausemenu.performed += ctx => TogglePause();
+
         rb = GetComponent<Rigidbody>();
         rb.interpolation = RigidbodyInterpolation.None;
         rb.constraints = RigidbodyConstraints.FreezeRotationX |
                          RigidbodyConstraints.FreezeRotationZ;
+
+        currentRespawnPoint = initialRespawnPoint != null ? initialRespawnPoint : transform;
 
         currentHealth = maxHealth;
 
@@ -125,6 +136,8 @@ public class scr_playerScript : MonoBehaviour
 
     private void FixedUpdate()
     {
+        if (gm != null && gm.IsPaused) return;
+
         if (isDashing) return;
 
         rb.AddForce(Physics.gravity * (gravityMultiplier - 1f), ForceMode.Acceleration);
@@ -156,6 +169,8 @@ public class scr_playerScript : MonoBehaviour
 
     private void Update()
     {
+        if (gm != null && gm.IsPaused) return;
+
         if (!isDashing && moveInput.sqrMagnitude > 0.0001f && moveDir.sqrMagnitude > 0.0001f)
         {
             Quaternion targetRot = Quaternion.LookRotation(moveDir);
@@ -372,7 +387,7 @@ public class scr_playerScript : MonoBehaviour
 
         yield return new WaitForSeconds(3f);
 
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        RespawnAtCheckpoint();
     }
 
     private System.Collections.IEnumerator InvulnerabilityRoutine()
@@ -488,5 +503,52 @@ public class scr_playerScript : MonoBehaviour
     public bool IsInteracting()
     {
         return interactPressed;
+    }
+
+    private void TogglePause()
+    {
+        if (gm != null)
+            gm.TogglePause();
+    }
+
+    public void SetCheckpoint(int number, Transform respawnPoint)
+    {
+        // Only allow moving forward (so checkpoint 1 can't overwrite checkpoint 4)
+        if (number <= currentCheckpointNumber) return;
+
+        currentCheckpointNumber = number;
+        currentRespawnPoint = respawnPoint;
+
+        Debug.Log("Checkpoint reached: " + number);
+    }
+
+    private void RespawnAtCheckpoint()
+    {
+        // re-enable player visuals/controls
+        controls.PlayerControls.Enable();
+        rb.isKinematic = false;
+
+        // reset position + physics
+        rb.linearVelocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
+
+        if (currentRespawnPoint != null)
+        {
+            transform.position = currentRespawnPoint.position;
+        }
+
+        // restore visuals
+        if (renderersToFlash != null)
+        {
+            foreach (var r in renderersToFlash)
+                if (r != null) r.enabled = true;
+        }
+
+        // restore health (simple)
+        currentHealth = maxHealth;
+
+        // restore jumps
+        jumpsRemaining = maxJumps;
+        isGrounded = true;
     }
 }

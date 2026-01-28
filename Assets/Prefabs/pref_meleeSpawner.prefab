@@ -13,9 +13,10 @@ GameObject:
   - component: {fileID: 2345120298568264087}
   - component: {fileID: 4182109422195252938}
   - component: {fileID: 9099233802363444447}
+  - component: {fileID: -2136285453026681435}
   m_Layer: 0
   m_Name: pref_meleeSpawner
-  m_TagString: Untagged
+  m_TagString: Enemy
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -131,6 +132,21 @@ MonoBehaviour:
   renderersToFlash: []
   flashDuration: 0.15
   contactDamage: 10
+  essencePrefab: {fileID: 5740114062547483274, guid: 62728fd2f20e22744b14c5212d3409fd, type: 3}
+--- !u!114 &-2136285453026681435
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 132741568450817328}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c6dd7ea6627915b47a8ebc124f6dd818, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  prefabToSpawn: {fileID: 766533704027268053, guid: 7e0025293203a62459ac1fea1cb2a044, type: 3}
+  spawnInterval: 10
 --- !u!1 &2174096578593006000
 GameObject:
   m_ObjectHideFlags: 0
@@ -243,7 +259,7 @@ Transform:
   m_GameObject: {fileID: 2475857065674187277}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.899, z: 1.372}
+  m_LocalPosition: {x: -0.233, y: 0.899, z: 1.848}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

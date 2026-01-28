@@ -10,6 +10,7 @@ TagManager:
   - Explosion
   - Destructible
   - HeavyAttack
+  - Enemy
   layers:
   - Default
   - TransparentFX

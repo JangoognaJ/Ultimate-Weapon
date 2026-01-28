@@ -1,42 +1,35 @@
 using UnityEngine;
-using UnityEngine.UIElements;
+using UnityEngine.AI;
 
 public class scr_meleeEnemy : scr_baseEnemy
 {
-    public float rotateSpeed = 10f;
-    public float stopDistance = 0.5f;
+    public float rotateSpeed = 10f;   // optional (agent can rotate too)
+    public float stopDistance = 1.0f;
+
+    private NavMeshAgent agent;
 
     protected override void Awake()
     {
-        base.Awake();   
+        base.Awake();
+
+        agent = GetComponent<NavMeshAgent>();
+        if (agent == null) agent = gameObject.AddComponent<NavMeshAgent>();
+
+        agent.speed = moveSpeed;
+        agent.stoppingDistance = stopDistance;
+
+        // Your enemies use Rigidbody right now; easiest is:
+        // Make Rigidbody kinematic so it doesn't fight the agent.
+        if (rb != null)
+        {
+            rb.isKinematic = true;
+        }
     }
 
-    void FixedUpdate()
+    void Update()
     {
-        if (player == null || currentHealth <= 0)
-            return;
+        if (player == null || currentHealth <= 0) return;
 
-        Vector3 dir = player.position - transform.position;
-        dir.y = 0f;
-
-        
-        if (dir.sqrMagnitude > 0.001f)
-        {
-            Quaternion targetRot = Quaternion.LookRotation(dir);
-            transform.rotation = Quaternion.Slerp(
-                transform.rotation,
-                targetRot,
-                rotateSpeed * Time.fixedDeltaTime
-            );
-        }
-
-        
-        float dist = dir.magnitude;
-
-        if (dist > stopDistance)
-        {
-            Vector3 moveDir = dir.normalized;
-            rb.MovePosition(rb.position + moveDir * moveSpeed * Time.fixedDeltaTime);
-        }
+        agent.SetDestination(player.position);
     }
 }
