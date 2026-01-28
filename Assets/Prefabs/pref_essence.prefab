@@ -101,7 +101,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1e906a16dc67e1e478443821eb2398cf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  lifeTime: 5
+  lifeTime: 30
   attractRadius: 4
-  moveSpeed: 8
+  moveSpeed: 16
   healAmount: 5

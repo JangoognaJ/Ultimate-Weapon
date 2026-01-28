@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class scr_essence : MonoBehaviour
 {
-    public float lifeTime = 5f;        
+    public float lifeTime = 30f;        
     public float attractRadius = 4f;   
     public float moveSpeed = 8f;       
     public int healAmount = 5;         
@@ -20,11 +20,11 @@ public class scr_essence : MonoBehaviour
         if (playerScript != null)
         {
             player = playerScript.transform;
-            Debug.Log($"Essence: found player {player.name}");
+           
         }
         else
         {
-            Debug.LogError("Essence: NO scr_playerScript found in scene!");
+           
         }
     }
 
@@ -42,12 +42,12 @@ public class scr_essence : MonoBehaviour
         float dist = Vector3.Distance(transform.position, player.position);
 
         
-        Debug.Log($"Essence: distance to player = {dist}");
+        
 
         if (!isHoming && dist <= attractRadius)
         {
             isHoming = true;
-            Debug.Log("Essence: started homing");
+           
         }
 
         
@@ -60,7 +60,7 @@ public class scr_essence : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        Debug.Log($"Essence: OnTriggerEnter with {other.name}");
+        
 
         
         scr_playerScript playerScript =
@@ -69,7 +69,7 @@ public class scr_essence : MonoBehaviour
 
         if (playerScript != null)
         {
-            Debug.Log("Essence: healing player");
+            playerScript.AddEssenceStack();
             playerScript.Heal(healAmount);
             playerScript.ReduceHeat(5f);
             Destroy(gameObject);

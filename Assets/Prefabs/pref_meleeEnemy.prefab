@@ -172,7 +172,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   maxHealth: 100
-  moveSpeed: 3
+  moveSpeed: 10
   renderersToFlash: []
   flashDuration: 0.15
   contactDamage: 10

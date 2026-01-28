@@ -1,10 +1,11 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.SceneManagement;
 
 public class scr_playerScript : MonoBehaviour
 {
-    [SerializeField] private Transform initialRespawnPoint; 
+    [SerializeField] private Transform initialRespawnPoint;
     private Transform currentRespawnPoint;
     private int currentCheckpointNumber = 0;
 
@@ -20,13 +21,19 @@ public class scr_playerScript : MonoBehaviour
     public Transform attackSpawnPoint;
 
     private float gravityMultiplier = 1.5f;
-    private float moveSpeed = 10f;
+
+    // NOTE: moveSpeed is now a BASE value; actual move speed = baseMoveSpeed * SpeedMultiplier
+    [SerializeField] private float baseMoveSpeed = 10f;
+
     private float jumpForce = 10f;
     [SerializeField] private int maxJumps = 2;
     private int jumpsRemaining;
     [SerializeField] private Transform modelRoot;
     [SerializeField] private float flipDuration = 0.3f;
-    private float dashSpeed = 50f;
+
+    // NOTE: dashSpeed is now a BASE value; actual dash speed = baseDashSpeed * SpeedMultiplier (simple + consistent)
+    [SerializeField] private float baseDashSpeed = 50f;
+
     private float dashDuration = 0.2f;
     private float dashCooldown = 2f;
     private float lightAttackCooldown = 0.1f;
@@ -72,6 +79,57 @@ public class scr_playerScript : MonoBehaviour
     private bool isFlipping = false;
 
     Rigidbody rb;
+
+    // -----------------------------
+    // ESSENCE BUFF SYSTEM (STACKS)
+    // -----------------------------
+    [Header("Essence Buff (Stacks)")]
+    [SerializeField] private float essenceDuration = 15f;     // how long EACH stack lasts
+    [SerializeField] private float speedPerStack = 0.10f;    // +10% speed per stack
+    [SerializeField] private float damagePerStack = 0.15f;   // +15% damage per stack
+
+    // each pickup adds one expiry time; expired entries get removed
+    private readonly List<float> essenceStackExpiryTimes = new List<float>();
+
+    public int EssenceStacks => essenceStackExpiryTimes.Count;
+    public float SpeedMultiplier => 1f + (EssenceStacks * speedPerStack);
+    public float DamageMultiplier => 1f + (EssenceStacks * damagePerStack);
+
+    // Call this from your essence pickup script
+    public void AddEssenceStack()
+    {
+        essenceStackExpiryTimes.Add(Time.time + essenceDuration);
+
+        float actualSpeed = baseMoveSpeed * SpeedMultiplier;
+
+        Debug.Log(
+            $"[ESSENCE] Stacks: {EssenceStacks} | " +
+            $"SpeedMult: {SpeedMultiplier:F2} | " +
+            $"ActualSpeed: {actualSpeed:F2} | " +
+            $"DamageMult: {DamageMultiplier:F2}"
+        );
+    }
+
+    // Optional overload if you want the essence prefab to vary duration/values per drop
+    public void AddEssenceStack(float duration, float speedStack = -1f, float damageStack = -1f)
+    {
+        if (speedStack >= 0f) speedPerStack = speedStack;
+        if (damageStack >= 0f) damagePerStack = damageStack;
+
+        essenceStackExpiryTimes.Add(Time.time + duration);
+    }
+
+    private void TickEssenceStacks()
+    {
+        if (essenceStackExpiryTimes.Count == 0) return;
+
+        float now = Time.time;
+        for (int i = essenceStackExpiryTimes.Count - 1; i >= 0; i--)
+        {
+            if (now >= essenceStackExpiryTimes[i])
+                essenceStackExpiryTimes.RemoveAt(i);
+        }
+    }
 
     void Awake()
     {
@@ -140,6 +198,8 @@ public class scr_playerScript : MonoBehaviour
 
         if (isDashing) return;
 
+        Debug.Log($"MOVE speedMult={SpeedMultiplier} actual={(baseMoveSpeed * SpeedMultiplier)}");
+
         rb.AddForce(Physics.gravity * (gravityMultiplier - 1f), ForceMode.Acceleration);
 
         moveDir = Vector3.zero;
@@ -158,7 +218,8 @@ public class scr_playerScript : MonoBehaviour
             moveDir = camForward * moveInput.y + camRight * moveInput.x;
             moveDir.Normalize();
 
-            rb.MovePosition(rb.position + moveDir * moveSpeed * Time.fixedDeltaTime);
+            float actualMoveSpeed = baseMoveSpeed * SpeedMultiplier;
+            rb.MovePosition(rb.position + moveDir * actualMoveSpeed * Time.fixedDeltaTime);
         }
 
         if (moveDir.sqrMagnitude > 0.0001f)
@@ -170,6 +231,9 @@ public class scr_playerScript : MonoBehaviour
     private void Update()
     {
         if (gm != null && gm.IsPaused) return;
+
+        // tick buffs
+        TickEssenceStacks();
 
         if (!isDashing && moveInput.sqrMagnitude > 0.0001f && moveDir.sqrMagnitude > 0.0001f)
         {
@@ -217,7 +281,8 @@ public class scr_playerScript : MonoBehaviour
         else
             dashDir = transform.forward;
 
-        rb.linearVelocity = dashDir * dashSpeed;
+        float actualDashSpeed = baseDashSpeed * SpeedMultiplier;
+        rb.linearVelocity = dashDir * actualDashSpeed;
 
         yield return new WaitForSeconds(dashDuration);
 
@@ -335,7 +400,15 @@ public class scr_playerScript : MonoBehaviour
         Vector3 spawnPosition = attackSpawnPoint ? attackSpawnPoint.position : transform.position;
         Quaternion spawnRotation = transform.rotation;
 
-        Instantiate(prefab, spawnPosition, spawnRotation);
+        GameObject attackObj = Instantiate(prefab, spawnPosition, spawnRotation);
+
+        // SIMPLE damage scaling hookup:
+        // This tries to tell the spawned attack object (and its children) what the player's damage multiplier is.
+        // If your attack script has a method like:
+        //   void SetDamageMultiplier(float mult)
+        // ...this will just work.
+        float dmgMult = DamageMultiplier;
+        attackObj.BroadcastMessage("SetDamageMultiplier", dmgMult, SendMessageOptions.DontRequireReceiver);
     }
 
     public void TakeDamage(int amount)
@@ -550,5 +623,8 @@ public class scr_playerScript : MonoBehaviour
         // restore jumps
         jumpsRemaining = maxJumps;
         isGrounded = true;
+
+        // OPTIONAL: clear essence stacks on death/respawn (comment out if you want them to persist)
+        essenceStackExpiryTimes.Clear();
     }
 }

@@ -5,8 +5,11 @@ public class scr_heavyAttack : MonoBehaviour
     public float speed = 20f;
     public float lifeTime = 5f;
 
-   
+    [SerializeField] private int baseDamage = 50;
+
     public GameObject explosionPrefab;
+
+    private float damageMultiplier = 1f;
 
     Rigidbody rb;
 
@@ -15,10 +18,15 @@ public class scr_heavyAttack : MonoBehaviour
         rb = GetComponent<Rigidbody>();
     }
 
+    // Called by player via BroadcastMessage
+    public void SetDamageMultiplier(float mult)
+    {
+        damageMultiplier = Mathf.Max(0f, mult);
+    }
+
     void OnEnable()
     {
         rb.linearVelocity = transform.forward * speed;
-
     }
 
     void Start()
@@ -50,7 +58,8 @@ public class scr_heavyAttack : MonoBehaviour
         scr_baseEnemy enemy = collision.gameObject.GetComponent<scr_baseEnemy>();
         if (enemy != null)
         {
-            enemy.TakeDamage(50);
+            int finalDamage = Mathf.RoundToInt(baseDamage * damageMultiplier);
+            enemy.TakeDamage(finalDamage);
         }
 
         Destroy(gameObject);
