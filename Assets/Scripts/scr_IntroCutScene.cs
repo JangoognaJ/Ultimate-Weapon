@@ -4,7 +4,8 @@ using UnityEngine.UI;
 using TMPro;
 
 public class scr_IntroCutscene : MonoBehaviour
-{
+{ 
+
     public GameObject gameplayUI; // drag your HUD canvas here
     public GameObject cutsceneRoot;   // whole canvas
     public TMP_Text textUI;
